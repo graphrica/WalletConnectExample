@@ -1,5 +1,4 @@
 import Onboard from "@web3-onboard/core";
-
 import { useState } from "react";
 import { VStack, Button, Text, HStack, Select, Box } from "@chakra-ui/react";
 import { CheckCircleIcon, WarningIcon } from "@chakra-ui/icons";
@@ -7,22 +6,26 @@ import { Tooltip } from "@chakra-ui/react";
 import { toHex, truncateAddress } from "./utils";
 import injectedModule from "@web3-onboard/injected-wallets";
 import walletConnectModule from "@web3-onboard/walletconnect";
+import ledgerModule from '@web3-onboard/ledger'
 import walletLinkModule from "@web3-onboard/walletlink";
-import setupContracts from "./contractBooter";
 import { ethers } from "ethers";
+import TokenFactoryABI from "./TokenFactory.json";
+
+
 
 const MAINNET_RPC_URL = `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`;
 const ROPSTEN_RPC_URL = `https://ropsten.infura.io/v3/${process.env.INFURA_KEY}`;
 const RINKEBY_RPC_URL = `https://rinkeby.infura.io/v3/${process.env.INFURA_KEY}`;
-const MUMBAI_RPC_URL = `https://polygon-mumbai.infura.io/v3/${process.env.INFURA_KEY}`;
+const MUMBAI_RPC_URL = `https://polygon-mumbai.infura.io/v3/INFURA KEY HERE`;
 const POLYGON_RPC_URL = `https://polygon-mainnet.infura.io/v3/${process.env.INFURA_KEY}`;
 
 const injected = injectedModule();
 const walletConnect = walletConnectModule();
 const walletLink = walletLinkModule();
+const ledger = ledgerModule();
 
 const onboard = Onboard({
-  wallets: [walletLink, walletConnect, injected],
+  wallets: [walletLink, walletConnect, injected, ledger],
   chains: [
     {
       id: "0x1", // chain ID must be in hexadecimel
@@ -73,7 +76,7 @@ const onboard = Onboard({
 });
 
 export default function Home() {
-  const [_, setProvider] = useState();
+  const [provider, setProvider] = useState();
   const [account, setAccount] = useState();
   const [error, setError] = useState("");
   const [chainId, setChainId] = useState();
@@ -88,13 +91,24 @@ export default function Home() {
       const { accounts, chains, provider } = wallets[0];
       setAccount(accounts[0].address);
       setChainId(chains[0].id);
-      setProvider(provider);
+      setProvider(new ethers.providers.Web3Provider(provider));
       setIsLoading(false);
-      setContract(setupContracts(provider))
+      setContract(setupContracts())
     } catch (error) {
       setError(error);
     }
   };
+
+  function setupContracts (){
+
+    debugger;
+    const tokenFactoryContract = new ethers.Contract(
+      "0x17e0346F6678fAb9D1867A6C073CAE74d39bc74C",
+      TokenFactoryABI.abi,
+      provider
+    );
+    return tokenFactoryContract;
+}
 
   const switchNetwork = async () => {
     await onboard.setChain({ chainId: toHex(network) });
@@ -113,15 +127,13 @@ export default function Home() {
   };
 
   const createToken = async () => {
-    const [primaryWallet] = await onboard.state.get().wallets;
-    if (!primaryWallet) return;
-    var signer = provider?.getUncheckedSigner(primaryWallet?.accounts[0].address)
-    if(wallet?.accounts[0].address && signer){
+    debugger;
+    var signer = provider?.getUncheckedSigner(account)
+    if(account && signer){
       var contractWithSigner = contract.connect(signer);
       console.log(contractWithSigner);
-      await contractWithSigner.functions.createToken(ethers.util.parseUnits("10000"), "KentMoney", "KENT").catch((err) => console.log(err));;
+      await contractWithSigner.functions.createToken(ethers.utils.parseUnits("10000"), "KentMoney", "KENT").catch((err) => console.log(err));
     }
-    refreshState();
   };
 
   const refreshState = () => {
@@ -164,7 +176,8 @@ export default function Home() {
           {!account ? (
             <Button onClick={connectWallet}>Connect Wallet</Button>
           ) : (
-            <Button onClick={disconnect}>Disconnect</Button>
+            <><Button onClick={disconnect}>Disconnect</Button>
+            <Button onClick={createToken}>Create Token</Button></>
           )}
         </HStack>
         <VStack justifyContent="center" alignItems="center" padding="10px 0">
