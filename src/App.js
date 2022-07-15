@@ -1,22 +1,28 @@
 import Onboard from "@web3-onboard/core";
 import { useState } from "react";
-import { VStack, Button, Text, HStack, Select, Box } from "@chakra-ui/react";
+import {
+  VStack,
+  Button,
+  Input,
+  Text,
+  HStack,
+  Select,
+  Box,
+} from "@chakra-ui/react";
 import { CheckCircleIcon, WarningIcon } from "@chakra-ui/icons";
 import { Tooltip } from "@chakra-ui/react";
 import { toHex, truncateAddress } from "./utils";
 import injectedModule from "@web3-onboard/injected-wallets";
 import walletConnectModule from "@web3-onboard/walletconnect";
-import ledgerModule from '@web3-onboard/ledger'
+import ledgerModule from "@web3-onboard/ledger";
 import walletLinkModule from "@web3-onboard/walletlink";
 import { ethers } from "ethers";
 import TokenFactoryABI from "./TokenFactory.json";
 
-
-
 const MAINNET_RPC_URL = `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`;
 const ROPSTEN_RPC_URL = `https://ropsten.infura.io/v3/${process.env.INFURA_KEY}`;
 const RINKEBY_RPC_URL = `https://rinkeby.infura.io/v3/${process.env.INFURA_KEY}`;
-const MUMBAI_RPC_URL = `https://polygon-mumbai.infura.io/v3/INFURA KEY HERE`;
+const MUMBAI_RPC_URL = `https://polygon-mumbai.infura.io/v3/a4905e3b34cc498aa5a839bbcf49b8f2`;
 const POLYGON_RPC_URL = `https://polygon-mainnet.infura.io/v3/${process.env.INFURA_KEY}`;
 
 const injected = injectedModule();
@@ -80,6 +86,9 @@ export default function Home() {
   const [account, setAccount] = useState();
   const [error, setError] = useState("");
   const [chainId, setChainId] = useState();
+  const [symbol, setSymbol] = useState();
+  const [initialSupply, setInitialSupply] = useState();
+  const [name, setName] = useState();
   const [network, setNetwork] = useState();
   const [contract, setContract] = useState();
   const [isLoading, setIsLoading] = useState(false);
@@ -93,14 +102,13 @@ export default function Home() {
       setChainId(chains[0].id);
       setProvider(new ethers.providers.Web3Provider(provider));
       setIsLoading(false);
-      setContract(setupContracts())
+      setContract(setupContracts());
     } catch (error) {
       setError(error);
     }
   };
 
-  function setupContracts (){
-
+  function setupContracts() {
     debugger;
     const tokenFactoryContract = new ethers.Contract(
       "0x17e0346F6678fAb9D1867A6C073CAE74d39bc74C",
@@ -108,7 +116,7 @@ export default function Home() {
       provider
     );
     return tokenFactoryContract;
-}
+  }
 
   const switchNetwork = async () => {
     await onboard.setChain({ chainId: toHex(network) });
@@ -128,11 +136,13 @@ export default function Home() {
 
   const createToken = async () => {
     debugger;
-    var signer = provider?.getUncheckedSigner(account)
-    if(account && signer){
+    var signer = provider?.getUncheckedSigner(account);
+    if (account && signer) {
       var contractWithSigner = contract.connect(signer);
       console.log(contractWithSigner);
-      await contractWithSigner.functions.createToken(ethers.utils.parseUnits("10000"), "KentMoney", "KENT").catch((err) => console.log(err));
+      await contractWithSigner.functions
+        .createToken(ethers.utils.parseUnits(initialSupply), name, symbol)
+        .catch((err) => console.log(err));
     }
   };
 
@@ -174,10 +184,37 @@ export default function Home() {
         {isLoading && <div>Loading...</div>}
         <HStack>
           {!account ? (
+            <></>
+          ) : (
+            <>
+              <Input
+                variant="outline"
+                value={initialSupply}
+                placeholder="Insert Initial Supply"
+                onChange={(e) => setInitialSupply(e.target.value)}
+              ></Input>
+              <Input
+                variant="outline"
+                value={name}
+                placeholder="Insert Name"
+                onChange={(e) => setName(e.target.value)}
+              ></Input>
+              <Input
+                placeholder="Insert Symbol"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value)}
+              ></Input>
+            </>
+          )}
+        </HStack>
+        <HStack>
+          {!account ? (
             <Button onClick={connectWallet}>Connect Wallet</Button>
           ) : (
-            <><Button onClick={disconnect}>Disconnect</Button>
-            <Button onClick={createToken}>Create Token</Button></>
+            <>
+              <Button onClick={disconnect}>Disconnect</Button>
+              <Button onClick={createToken}>Create Token</Button>
+            </>
           )}
         </HStack>
         <VStack justifyContent="center" alignItems="center" padding="10px 0">
